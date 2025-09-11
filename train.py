@@ -137,10 +137,7 @@ for epoch in range(num_epochs):
     for X_batch, y_batch in train_loader:
         optimizer.zero_grad()
         outputs = model(X_batch)
-
-        # 使用类不平衡损失函数
         loss = criterion(outputs.reshape(-1, outputs.size(-1)), y_batch.reshape(-1, y_batch.size(-1)))
-
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
@@ -168,9 +165,7 @@ for epoch in range(num_epochs):
         for X_batch, y_batch in val_loader:
             outputs = model(X_batch)
 
-            # 使用类不平衡损失函数
             loss = criterion(outputs.reshape(-1, outputs.size(-1)), y_batch.reshape(-1, y_batch.size(-1)))
-
             val_loss += loss.item()
             _, predicted = torch.max(outputs.reshape(-1, outputs.size(-1)), -1)
             _, labels = torch.max(y_batch.reshape(-1, y_batch.size(-1)), -1)
@@ -286,7 +281,7 @@ plt.savefig(f'{file_name}confusion_matrix_normalized.png', bbox_inches='tight', 
 plt.close()
 
 
-# 记录并保存训练和测试结果到 CSV 文件
+# 记录并保存训练和测试结果
 results = {
     'epoch': list(range(1, (epoch_true_train if epoch_true_train else num_epochs) + 1)),  # num_epochs
     'train_loss': train_loss_list,
@@ -299,7 +294,7 @@ results_df['best_epoch'] = best_epoch
 results_df['best_val_acc'] = best_val_acc
 results_df.to_csv(f'{file_name}training_results.csv', index=False)
 
-# 记录测试结果到 CSV 文件
+# 记录测试结果
 test_results = {
     'accuracy': [accuracy],
     'kappa': [kappa]
@@ -307,4 +302,5 @@ test_results = {
 test_report_df = pd.DataFrame(report).transpose()
 test_results_df = pd.DataFrame(test_results)
 test_results_df = pd.concat([test_results_df, test_report_df], axis=1)
+
 test_results_df.to_csv(f'{file_name}test_results.csv', index=True)
