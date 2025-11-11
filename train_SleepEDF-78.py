@@ -149,9 +149,9 @@ print(f"Train-Test overlap: {train_test_overlap}")
 print(f"Val-Test overlap: {val_test_overlap}")
 
 if len(train_val_overlap) == 0 and len(train_test_overlap) == 0 and len(val_test_overlap) == 0:
-    print("✓ Patient splitting is correct - no patient overlap between splits!")
+    print("Patient splitting is correct - no patient overlap between splits!")
 else:
-    print("✗ Error: Patient overlap detected between splits!")
+    print("Error: Patient overlap detected between splits!")
 
 model = KanSleepNet(seq_length=15).to(device)
 criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 1.5, 1, 1, 1]).to(device))
@@ -343,3 +343,4 @@ test_results_df = pd.DataFrame(test_results)
 test_results_df = pd.concat([test_results_df, test_report_df], axis=1)
 
 test_results_df.to_csv(f'{file_name}test_results.csv', index=True)
+
