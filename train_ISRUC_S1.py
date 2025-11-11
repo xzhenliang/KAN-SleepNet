@@ -231,7 +231,6 @@ print('F1 Score (Weighted):', f1_weighted)
 f1_per_class = f1_score(y_seq_test_, y_seq_pred_, average=None)
 print('F1 Score (Per Class):', f1_per_class)
 
-
 labels = ['Wake', 'N1', 'N2', 'N3', 'REM']
 
 report = classification_report(y_true=y_seq_test_, y_pred=y_seq_pred_, target_names=labels, output_dict=True)
@@ -277,4 +276,3 @@ test_results_df = pd.DataFrame(test_results)
 test_results_df = pd.concat([test_results_df, test_report_df], axis=1)
 
 test_results_df.to_csv(f'{file_name}test_results.csv', index=True)
-
