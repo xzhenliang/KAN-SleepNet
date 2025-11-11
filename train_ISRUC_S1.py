@@ -88,8 +88,7 @@ train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-model = KanSleepNet(seq_length=15).to(device)  # seq_length = 15
-
+model = KanSleepNet(seq_length=15).to(device)
 criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 1.5, 1, 1, 1]).to(device))
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.90)
@@ -278,3 +277,4 @@ test_results_df = pd.DataFrame(test_results)
 test_results_df = pd.concat([test_results_df, test_report_df], axis=1)
 
 test_results_df.to_csv(f'{file_name}test_results.csv', index=True)
+
