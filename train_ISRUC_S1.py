@@ -22,7 +22,6 @@ np.random.seed(42)
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 
-# 设置GPU的索引
 gpu_index = 1
 device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -35,8 +34,6 @@ file_name = 'KAN_SleepNet_ISRUC_S1_'
 
 fnames = sorted(glob(os.path.join(data_path, '*.npz')))
 
-
-# Step 1: 按 subject 组织数据
 subjects_X, subjects_y = [], []
 for fname in fnames:
     samples = np.load(fname)
@@ -48,7 +45,6 @@ for fname in fnames:
     for i, label in enumerate(y):
         y_oh[i, label] = 1.
 
-    # 生成序列
     seq_length = 15
     X_seq, y_seq = [], []
     for j in range(0, len(x), seq_length):
@@ -58,14 +54,12 @@ for fname in fnames:
     subjects_X.append(np.array(X_seq))
     subjects_y.append(np.array(y_seq))
 
-# Step 2: subject-wise 划分索引
 n_subjects = len(subjects_X)
 all_indices = np.arange(n_subjects)
 
 train_idx, test_idx = train_test_split(all_indices, test_size=0.15, random_state=42)
 train_idx, val_idx = train_test_split(train_idx, test_size=15/85, random_state=42)
 
-# Step 3: 按照划分合并数据
 def concat_subjects(indices):
     X_cat = np.concatenate([subjects_X[i] for i in indices], axis=0)
     y_cat = np.concatenate([subjects_y[i] for i in indices], axis=0)
@@ -75,12 +69,10 @@ X_seq_train, y_seq_train = concat_subjects(train_idx)
 X_seq_val, y_seq_val = concat_subjects(val_idx)
 X_seq_test, y_seq_test = concat_subjects(test_idx)
 
-# Step 4: 扩展维度
 X_seq_train = np.expand_dims(X_seq_train, 2)
 X_seq_val = np.expand_dims(X_seq_val, 2)
 X_seq_test = np.expand_dims(X_seq_test, 2)
 
-# Step 5: 转换为Tensor
 X_seq_train = torch.tensor(X_seq_train, dtype=torch.float32).to(device)
 X_seq_val = torch.tensor(X_seq_val, dtype=torch.float32).to(device)
 X_seq_test = torch.tensor(X_seq_test, dtype=torch.float32).to(device)
@@ -88,7 +80,6 @@ y_seq_train = torch.tensor(y_seq_train, dtype=torch.float32).to(device)
 y_seq_val = torch.tensor(y_seq_val, dtype=torch.float32).to(device)
 y_seq_test = torch.tensor(y_seq_test, dtype=torch.float32).to(device)
 
-# Step 6: 构建 DataLoader
 train_dataset = TensorDataset(X_seq_train, y_seq_train)
 val_dataset = TensorDataset(X_seq_val, y_seq_val)
 test_dataset = TensorDataset(X_seq_test, y_seq_test)
@@ -97,16 +88,10 @@ train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-
-# 模型训练
 model = KanSleepNet(seq_length=15).to(device)  # seq_length = 15
 
-# 损失函数
 criterion = nn.CrossEntropyLoss(weight=torch.tensor([1, 1.5, 1, 1, 1]).to(device))
-
-# 优化器 指数衰减学习率
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
-# 创建学习率指数衰减调度器
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.90)
 
 num_epochs = 150
@@ -120,10 +105,9 @@ val_loss_list = []
 train_acc_list = []
 val_acc_list = []
 
-# 提前停止的参数
-patience = 20  # 多少个epoch没有改善后停止
-epochs_no_improve = 0  # 跟踪没有改善的epoch数
-early_stop = False  # 标志是否提前停止
+patience = 20
+epochs_no_improve = 0
+early_stop = False
 
 epoch_true_train = 0
 
@@ -136,7 +120,6 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
         outputs = model(X_batch)
 
-        # 使用类不平衡损失函数
         loss = criterion(outputs.reshape(-1, outputs.size(-1)), y_batch.reshape(-1, y_batch.size(-1)))
 
         loss.backward()
@@ -147,9 +130,7 @@ for epoch in range(num_epochs):
         train_correct += (predicted == labels).sum().item()
         train_total += labels.numel()
 
-    # 每个 epoch 结束时更新学习率
     scheduler.step()
-    # 打印当前学习率
     current_lr = scheduler.get_last_lr()[0]
     print(f"Epoch {epoch + 1}, Learning Rate: {current_lr}")
 
@@ -166,7 +147,6 @@ for epoch in range(num_epochs):
         for X_batch, y_batch in val_loader:
             outputs = model(X_batch)
 
-            # 使用类不平衡损失函数
             loss = criterion(outputs.reshape(-1, outputs.size(-1)), y_batch.reshape(-1, y_batch.size(-1)))
 
             val_loss += loss.item()
@@ -184,10 +164,9 @@ for epoch in range(num_epochs):
         best_epoch = epoch + 1
         torch.save(model.state_dict(), f'{file_name}model.pth')
 
-        # 早停机制，检查验证损失是否改善
-        epochs_no_improve = 0  # 重置没有改善的epoch数
+        epochs_no_improve = 0
     else:
-        epochs_no_improve += 1  # 增加没有改善的epoch数
+        epochs_no_improve += 1
 
     if val_acc > best_val_acc:
         best_val_acc = val_acc
@@ -195,7 +174,6 @@ for epoch in range(num_epochs):
     print(
         f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}')
 
-    # 检查是否需要提前停止
     if epochs_no_improve >= patience:
         epoch_true_train = epoch + 1
         print(f'Early stopping at epoch {epoch + 1}')
@@ -223,7 +201,7 @@ plt.suptitle('Training History')
 plt.savefig(f'{file_name}training_history.png')
 plt.close()
 
-# 测试
+# test
 model.load_state_dict(torch.load(f'{file_name}model.pth'))
 model.eval()
 y_seq_pred = []
@@ -250,7 +228,7 @@ f1_micro = f1_score(y_seq_test_, y_seq_pred_, average='micro')
 print('F1 Score (Micro):', f1_micro)
 f1_weighted = f1_score(y_seq_test_, y_seq_pred_, average='weighted')
 print('F1 Score (Weighted):', f1_weighted)
-# 返回每个类别的 F1-score
+
 f1_per_class = f1_score(y_seq_test_, y_seq_pred_, average=None)
 print('F1 Score (Per Class):', f1_per_class)
 
@@ -279,8 +257,6 @@ plt.title('Confusion Matrix (Normalized)')
 plt.savefig(f'{file_name}confusion_matrix_normalized.png', bbox_inches='tight', dpi=300)
 plt.close()
 
-
-# 记录并保存训练和测试结果到 CSV 文件
 results = {
     'epoch': list(range(1, (epoch_true_train if epoch_true_train else num_epochs) + 1)),  # num_epochs
     'train_loss': train_loss_list,
@@ -293,7 +269,6 @@ results_df['best_epoch'] = best_epoch
 results_df['best_val_acc'] = best_val_acc
 results_df.to_csv(f'{file_name}training_results.csv', index=False)
 
-# 记录测试结果到 CSV 文件
 test_results = {
     'accuracy': [accuracy],
     'kappa': [kappa]
@@ -301,4 +276,5 @@ test_results = {
 test_report_df = pd.DataFrame(report).transpose()
 test_results_df = pd.DataFrame(test_results)
 test_results_df = pd.concat([test_results_df, test_report_df], axis=1)
+
 test_results_df.to_csv(f'{file_name}test_results.csv', index=True)
